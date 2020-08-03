@@ -1,0 +1,29 @@
+plugins {
+	id 'org.springframework.boot' version '2.3.2.RELEASE'
+	id 'io.spring.dependency-management' version '1.0.9.RELEASE'
+	id 'java'
+}
+
+group = 'com.nth'
+version = '0.0.1-SNAPSHOT'
+sourceCompatibility = '11'
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+	implementation 'net.sourceforge.barbecue:barbecue:1.5-beta1'
+	implementation 'com.lowagie:itext:2.1.7.js6'
+	implementation 'org.apache.poi:poi:4.0.0'
+	implementation 'net.sf.jasperreports:jasperreports:6.5.0'
+	testImplementation('org.springframework.boot:spring-boot-starter-test') {
+		exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'
+	}
+}
+
+test {
+	useJUnitPlatform()
+}
