@@ -1,38 +1,37 @@
 package com.nth.jasperreport.service;
 
 import com.nth.jasperreport.report.ReportConstants;
+import com.nth.jasperreport.report.ReportType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.RestTemplate;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class ReportService {
-    public Map<String,?> printHtml() {
-        Map result = new HashMap();
-        result.put(ReportConstants.REPORT_TYPE, ReportConstants.PDF);
-        result.put(ReportConstants.REPORT_NAME, "LocationLabel.jasper");
-        result.put(ReportConstants.REPORT_DATA, getReportData());
-        return result;
+    private Map param = new HashMap();
+    private List datas = new ArrayList();
+
+    ReportService() {
+        RestTemplate restTemplate = new RestTemplate();
+        String url = "https://api.covid19api.com/summary";
+        Map response = restTemplate.getForObject(url, Map.class);
+        param.clear();
+        Map tmpparam = (Map) response.get("Global");
+        param.put("Confirmed", tmpparam.get("TotalConfirmed"));
+        param.put("Recovered", tmpparam.get("TotalRecovered"));
+        param.put("Deaths", tmpparam.get("TotalDeaths"));
+
+        datas = (List) response.get("Countries");
     }
 
-    public Map<String,?> printXml() {
+    public Map<String,?> printReport(ReportType type) {
         Map result = new HashMap();
-        result.put(ReportConstants.REPORT_TYPE, ReportConstants.PDF);
-        result.put(ReportConstants.REPORT_NAME, "LocationLabel.jasper");
-        result.put(ReportConstants.REPORT_DATA, getReportData());
+        result.put(ReportConstants.REPORT_TYPE, type);
+        result.put(ReportConstants.REPORT_NAME, "coronasumary.jasper");
+        result.put(ReportConstants.REPORT_PARAMETERS, param);
+        result.put(ReportConstants.REPORT_DATA, datas);
         return result;
-    }
-
-    public Map<String,?> printPdf() {
-        Map result = new HashMap();
-        result.put(ReportConstants.REPORT_TYPE, ReportConstants.PDF);
-        result.put(ReportConstants.REPORT_NAME, "LocationLabel.jasper");
-        result.put(ReportConstants.REPORT_DATA, getReportData());
-        return result;
-    }
-
-    private Object getReportData() {
-        return null;
     }
 }
