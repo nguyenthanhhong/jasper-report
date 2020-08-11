@@ -8,6 +8,9 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.*;
 
+/**
+ * @author Hong Nguyen
+ */
 @Service
 public class ReportService {
     private Map param = new HashMap();
@@ -17,7 +20,6 @@ public class ReportService {
         RestTemplate restTemplate = new RestTemplate();
         String url = "https://api.covid19api.com/summary";
         Map response = restTemplate.getForObject(url, Map.class);
-        param.clear();
         Map tmpparam = (Map) response.get("Global");
         param.put("Confirmed", tmpparam.get("TotalConfirmed"));
         param.put("Recovered", tmpparam.get("TotalRecovered"));

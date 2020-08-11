@@ -4,7 +4,9 @@ import net.sf.jasperreports.engine.*;
 import net.sf.jasperreports.engine.data.JRBeanCollectionDataSource;
 import net.sf.jasperreports.engine.export.HtmlExporter;
 import net.sf.jasperreports.engine.export.JRCsvExporter;
+import net.sf.jasperreports.engine.export.JRRtfExporter;
 import net.sf.jasperreports.engine.export.JRXlsExporter;
+import net.sf.jasperreports.engine.export.ooxml.JRDocxExporter;
 import net.sf.jasperreports.engine.export.ooxml.JRXlsxExporter;
 import net.sf.jasperreports.engine.util.JRLoader;
 import net.sf.jasperreports.export.*;
@@ -20,6 +22,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * @author Hong Nguyen
+ */
 @Component("ReportViewer")
 public class ReportViewer extends AbstractView {
     @Value("${REPORT_PATH}")
@@ -43,79 +48,86 @@ public class ReportViewer extends AbstractView {
 
         InputStream stream = new FileInputStream(file);
         JasperReport report;
-        String exportName = "";
         if (report_name.endsWith(".jasper")) {
             report = (JasperReport) JRLoader.loadObject(stream);
-            exportName = report_name.replaceAll(".jasper","");
         } else {
             report = JasperCompileManager.compileReport(stream);
-            exportName = report_name.replaceAll(".jrxml","");
         }
 
         JasperPrint jasperPrint = JasperFillManager.fillReport(report, params, dataSource);
-
-
+        final OutputStream outStream = report_type == ReportType.HTML ? null : response.getOutputStream();
+        Exporter exporter;
 
         switch (report_type) {
-            case HTML:
-                response.setContentType("text/html");
-                HtmlExporter exporter = new HtmlExporter(DefaultJasperReportsContext.getInstance());
-                exporter.setExporterInput(new SimpleExporterInput(jasperPrint));
-                exporter.setExporterOutput(new SimpleHtmlExporterOutput(response.getWriter()));
-                exporter.exportReport();
+            case PRINT:
+                JasperPrintManager.printReport(jasperPrint, false);
                 break;
             case XLS:
-                response.setHeader("Content-Disposition", "attachment;filename=\"" + new String(exportName.getBytes("utf-8"),"ISO-8859-1") + ".xls\"");
-                OutputStream xlsStream = response.getOutputStream();
-                JRXlsExporter xlsExporter = new JRXlsExporter();
-                xlsExporter.setExporterInput(new SimpleExporterInput(jasperPrint));
-                xlsExporter.setExporterOutput(new SimpleOutputStreamExporterOutput(xlsStream));
+                response.setHeader("Content-Disposition", "attachment;filename=\"" + jasperPrint.getName() + ".xls\"");
+                exporter = new JRXlsExporter();
+                exporter.setExporterInput(new SimpleExporterInput(jasperPrint));
+                exporter.setExporterOutput(new SimpleOutputStreamExporterOutput(outStream));
 
                 SimpleXlsReportConfiguration configuration = new SimpleXlsReportConfiguration();
                 configuration.setOnePagePerSheet(true);
                 configuration.setDetectCellType(true);
                 configuration.setCollapseRowSpan(false);
-                xlsExporter.setConfiguration(configuration);
+                exporter.setConfiguration(configuration);
 
-                xlsExporter.exportReport();
+                exporter.exportReport();
                 break;
             case XLSX:
-                response.setHeader("Content-Disposition", "attachment;filename=\"" + new String(exportName.getBytes("utf-8"),"ISO-8859-1") + ".xlsx\"");
-                OutputStream xlsxStream = response.getOutputStream();
-                JRXlsxExporter xlsxExporter = new JRXlsxExporter();
-                xlsxExporter.setExporterInput(new SimpleExporterInput(jasperPrint));
-                xlsxExporter.setExporterOutput(new SimpleOutputStreamExporterOutput(xlsxStream));
+                response.setHeader("Content-Disposition", "attachment;filename=\"" + jasperPrint.getName() + ".xlsx\"");
+                exporter = new JRXlsxExporter();
+                exporter.setExporterInput(new SimpleExporterInput(jasperPrint));
+                exporter.setExporterOutput(new SimpleOutputStreamExporterOutput(outStream));
 
                 SimpleXlsxReportConfiguration xlsxConfiguration = new SimpleXlsxReportConfiguration();
                 xlsxConfiguration.setOnePagePerSheet(true);
                 xlsxConfiguration.setDetectCellType(true);
                 xlsxConfiguration.setCollapseRowSpan(false);
-                xlsxExporter.setConfiguration(xlsxConfiguration);
+                exporter.setConfiguration(xlsxConfiguration);
 
-                xlsxExporter.exportReport();
+                exporter.exportReport();
+                break;
+            case DOC:
+                response.setHeader("Content-Disposition", "attachment;filename=\"" + jasperPrint.getName() + ".doc\"");
+                exporter = new JRRtfExporter();
+                exporter.setExporterInput(new SimpleExporterInput(jasperPrint));
+                exporter.setExporterOutput(new SimpleWriterExporterOutput(outStream));
+                exporter.setConfiguration(new SimpleRtfExporterConfiguration());
+                exporter.exportReport();
+                break;
+            case DOCX:
+                response.setHeader("Content-Disposition", "attachment;filename=\"" + jasperPrint.getName() + ".docx\"");
+                exporter = new JRDocxExporter();
+                exporter.setExporterInput(new SimpleExporterInput(jasperPrint));
+                exporter.setExporterOutput(new SimpleOutputStreamExporterOutput(outStream));
+
+                exporter.exportReport();
                 break;
             case CSV:
-                OutputStream csvStream = response.getOutputStream();
-                JRCsvExporter csvExporter = new JRCsvExporter();
+                exporter = new JRCsvExporter();
 
-                csvExporter.setExporterInput(new SimpleExporterInput(jasperPrint));
-                csvExporter.setExporterOutput(new SimpleWriterExporterOutput(csvStream));
+                exporter.setExporterInput(new SimpleExporterInput(jasperPrint));
+                exporter.setExporterOutput(new SimpleWriterExporterOutput(outStream));
 
-                csvExporter.exportReport();
+                exporter.exportReport();
                 break;
-            case PRINT:
-                JasperPrintManager.printReport(jasperPrint, false);
+            case HTML:
+                response.setContentType("text/html");
+                exporter = new HtmlExporter(DefaultJasperReportsContext.getInstance());
+                exporter.setExporterInput(new SimpleExporterInput(jasperPrint));
+                exporter.setExporterOutput(new SimpleHtmlExporterOutput(response.getWriter()));
+                exporter.exportReport();
                 break;
             case XML:
-                OutputStream xmlStream = response.getOutputStream();
-                JasperExportManager.exportReportToXmlStream(jasperPrint, xmlStream);
-                xmlStream.flush();
-                xmlStream.close();
+                JasperExportManager.exportReportToXmlStream(jasperPrint, outStream);
+                outStream.flush();
+                outStream.close();
                 break;
             default:
                 response.setContentType("application/pdf");
-                final OutputStream outStream = response.getOutputStream();
-
                 JasperExportManager.exportReportToPdfStream(jasperPrint, outStream);
                 outStream.flush();
                 outStream.close();
